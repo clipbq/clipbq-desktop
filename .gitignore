@@ -1,0 +1,6 @@
+*.spec
+.env
+.venv/
+build/
+*.html
+dist/
