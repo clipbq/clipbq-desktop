@@ -4,3 +4,4 @@
 build/
 *.html
 dist/
+__pycache__/
