@@ -27,6 +27,9 @@ class NumberedRowWidget(QWidget):
         )
 
         self.text_label = QLabel(text)
+        self.text_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
         self.text_label.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
