@@ -24,12 +24,19 @@ jobs:
         pip install PyQt6 pyinstaller
         pip install -r requirements.txt
 
+    - name: Create .env file
+      run: |
+        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+        echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+        echo "LOGIN_PAGE_URL=${{ secrets.LOGIN_PAGE_URL }}" >> .env
+      shell: powershell
+
     - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile --noconsole --name="clipbq" --collect-all PyQt6 clipboard_app.py
+        pyinstaller --onefile --noconsole --name="clipBQ" --collect-all PyQt6 --windowed --clean --add-data "icon.png;." --add-data ".env;." --add-data "icon.ico;." --icon=icon.ico main.py
 
     - name: Upload Finished EXE
       uses: actions/upload-artifact@v4
       with:
         name: clipbq-windows-app
-        path: dist/clipbq.exe
+        path: dist/clipBQ.exe
