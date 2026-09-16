@@ -109,7 +109,6 @@ class ClipboardMonitorThread(QThread):
 
     def stop(self):
         self.running = False
-        self.wait()
 
 
 class MainWindow(QMainWindow):
@@ -298,8 +297,13 @@ class MainWindow(QMainWindow):
             print(f"Error pushing clipboard entry: {e}")
 
     def closeEvent(self, event):
-        if self.monitor_thread:
+        if self.monitor_thread and self.monitor_thread.isRunning():
             self.monitor_thread.stop()
+            self.monitor_thread.quit()
+            if not self.monitor_thread.wait(2000):
+                # If it takes too long (e.g. pyperclip hangs), forcefully terminate it
+                self.monitor_thread.terminate()
+                self.monitor_thread.wait()
         event.accept()
 
 
