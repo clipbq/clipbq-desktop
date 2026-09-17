@@ -35,11 +35,9 @@ jobs:
     - name: Build with PyInstaller
       run: |
         pyinstaller --onefile --noconsole --name="clipBQ" --collect-all PyQt6 --windowed --clean \
-          --add-data "icon.png:." \
           --add-data ".env:." \
           --add-data "icon.icns:." \
-          --icon=icon.png \
-          main.py
+          --icon=icon.icns main.py
 
     - name: Upload Finished Mac App
       uses: actions/upload-artifact@v4

@@ -35,7 +35,10 @@ jobs:
 
     - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile --noconsole --name="clipBQ" --collect-all PyQt6 --windowed --clean --add-data "icon.png;." --add-data ".env;." --add-data "icon.ico;." --icon=icon.ico main.py
+        pyinstaller --onefile --noconsole --name="clipBQ" --collect-all PyQt6 --windowed --clean \
+        --add-data ".env;." \
+        --add-data "icon.ico;." \
+        --icon=icon.ico main.py
 
     - name: Upload Finished EXE
       uses: actions/upload-artifact@v4
