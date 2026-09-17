@@ -114,7 +114,7 @@ class ClipboardMonitorThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("clipBQ Cloud Monitor")
+        self.setWindowTitle("clipBQ Cloud")
         self.resize(480, 550)
         self.supabase: Client = None
         self.monitor_thread = None

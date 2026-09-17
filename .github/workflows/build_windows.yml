@@ -12,6 +12,8 @@ jobs:
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
+      with:
+        clean: true
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -38,5 +40,6 @@ jobs:
     - name: Upload Finished EXE
       uses: actions/upload-artifact@v4
       with:
-        name: clipbq-windows-app
+        name: clipBQ-windows-app
         path: dist/clipBQ.exe
+        overwrite: true
