@@ -1,0 +1,88 @@
+name: Build Linux AppImage
+
+on:
+  push:
+    branches: [ main, master ]  
+  workflow_dispatch:      
+
+jobs:
+  build-linux:
+    name: Build and Package AppImage
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        clean: true
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libegl1-mesa libgl1-mesa-glx libxkbcommon-x11-0 libxcb-cursor0
+        python -m pip install --upgrade pip
+        pip install PyQt6 pyinstaller
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    - name: Create .env file
+      run: |
+        echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+        echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+        echo "LOGIN_PAGE_URL=${{ secrets.LOGIN_PAGE_URL }}" >> .env
+
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --onefile --noconsole --name="clipBQ" --collect-all PyQt6 --windowed --clean \
+        --add-data ".env:." \
+        --add-data "icon.png:." \
+        main.py
+
+    - name: Prepare AppDir Structure
+      run: |
+        mkdir -p AppDir/usr/bin
+        
+        # Move PyInstaller binary to the AppDir
+        cp dist/clipBQ AppDir/usr/bin/
+        chmod +x AppDir/usr/bin/clipBQ
+        
+        # Copy app icon to root
+        cp icon.png AppDir/clipBQ.png
+        
+        # Create the mandatory AppRun script
+        echo '#!/bin/sh' > AppDir/AppRun
+        echo 'exec "$(dirname "$0")/usr/bin/clipBQ" "$@"' >> AppDir/AppRun
+        chmod +x AppDir/AppRun
+        
+        # Create a valid Linux Desktop Entry file
+        cat <<EOF > AppDir/clipBQ.desktop
+        [Desktop Entry]
+        Type=Application
+        Name=clipBQ
+        Comment=Self-service clipboard manager for cross-platform clipboard state management
+        Exec=clipBQ
+        Icon=clipBQ
+        Categories=Utility;
+        EOF
+
+    - name: Download AppImageTool
+      run: |
+        wget -O appimagetool https://github.com
+        chmod +x appimagetool
+        ./appimagetool --appimage-extract
+
+    - name: Pack AppImage
+      env:
+        ARCH: x86_64
+      run: |
+        ./squashfs-root/AppRun AppDir/ clipBQ-x86_64.AppImage
+
+    - name: Upload Finished AppImage
+      uses: actions/upload-artifact@v4
+      with:
+        name: clipBQ-linux-app
+        path: clipBQ-x86_64.AppImage
