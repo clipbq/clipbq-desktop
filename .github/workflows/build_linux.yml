@@ -69,7 +69,7 @@ jobs:
 
     - name: Download AppImageTool
       run: |
-        wget -q -O appimagetool https://github.com
+        wget -q -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
         chmod +x appimagetool
         ./appimagetool --appimage-extract
 
