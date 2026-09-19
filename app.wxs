@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://microsoft.com">
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
     <Product Id="fa792526-8986-4366-8c86-73deafc1f442" Name="clipBQ" Language="1033"
         Version="1.0.0.1"
