@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://microsoft.com">
+
+    <Product Id="fa792526-8986-4366-8c86-73deafc1f442" Name="clipBQ" Language="1033"
+        Version="1.0.0.1"
+        Manufacturer="softlabs.co.ke" UpgradeCode="d72d24a8-6f1e-4cb8-8f85-48fa2cce4b1a">
+        <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+        <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+        <MediaTemplate EmbedCab="yes" />
+
+
+        <Icon Id="icon.ico" SourceFile="icon.ico" />
+        <Property Id="ARPPRODUCTICON" Value="icon.ico" />
+
+
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFilesFolder">
+                <Directory Id="INSTALLFOLDER" Name="clipBQ" />
+            </Directory>
+            <Directory Id="DesktopFolder" Name="Desktop" />
+        </Directory>
+
+
+        <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+            <Component Id="MainExecutable" Guid="a6d2b38f-51a2-4de7-9db6-b2512f45ccae">
+
+                <File Id="AppEXE" Source="dist/clipBQ.exe" KeyPath="yes">
+                    <Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="clipBQ"
+                        WorkingDirectory="INSTALLFOLDER" Icon="icon.ico" Advertise="yes" />
+                </File>
+            </Component>
+        </ComponentGroup>
+
+        <Feature Id="ProductFeature" Title="clipBQ" Level="1">
+            <ComponentGroupRef Id="ProductComponents" />
+        </Feature>
+    </Product>
+</Wix>

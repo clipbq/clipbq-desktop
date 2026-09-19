@@ -84,3 +84,4 @@ jobs:
       with:
         name: clipBQ-linux-app
         path: clipBQ-x86_64.AppImage
+        overwrite: true

@@ -40,9 +40,18 @@ jobs:
         --add-data "icon.ico;." `
         --icon=icon.ico main.py
 
-    - name: Upload Finished EXE
+    - name: Install WiX Toolset
+      run: |
+        choco install wixtoolset --no-progress
+
+    - name: Build MSI Installer
+      run: |
+        candle.exe app.wxs -out app.wixobj
+        light.exe app.wixobj -out clipBQInstaller.msi
+
+    - name: Upload MSI Installer
       uses: actions/upload-artifact@v4
       with:
         name: clipBQ-windows-app
-        path: dist/clipBQ.exe
+        path: clipBQInstaller.msi
         overwrite: true
