@@ -1,4 +1,5 @@
 import sys
+import gc
 import os
 import ctypes
 import json
@@ -17,7 +18,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QLineEdit,
     QMessageBox,
-    QStyle,
 )
 from PyQt6.QtGui import QIcon, QPixmap
 from supabase import create_client, Client
@@ -85,11 +85,14 @@ class ClipboardMonitorThread(QThread):
             self.last_clip = pyperclip.paste()
         except Exception:
             self.last_clip = ""
-
+        loop_counter = 0
         while self.running:
             self.msleep(1000)
             try:
                 current_clip = pyperclip.paste()
+                # ---- Limit to 50000
+                if current_clip and len(current_clip) > 50000:
+                    current_clip = current_clip[:50000] + "... (truncated)"
                 if (
                     current_clip
                     and isinstance(current_clip, str)
@@ -97,6 +100,11 @@ class ClipboardMonitorThread(QThread):
                 ):
                     self.last_clip = current_clip
                     self.new_clip_signal.emit(current_clip)
+                # ---G Collect every 60s-----#
+                loop_counter += 1
+                if loop_counter >= 60:
+                    gc.collect()
+                    loop_counter = 0
             except Exception:
                 pass
 
@@ -186,6 +194,14 @@ class MainWindow(QMainWindow):
         # History List View
         layout.addWidget(QLabel("Clipboard Sync History:"))
         self.history_list = NumberedListWidget()
+
+        self.history_list.setVerticalScrollMode(
+            self.history_list.ScrollMode.ScrollPerPixel
+        )
+        self.history_list.setHorizontalScrollMode(
+            self.history_list.ScrollMode.ScrollPerPixel
+        )
+
         layout.addWidget(self.history_list)
 
         # Token Input Section (Manual Paste Option)
@@ -447,10 +463,14 @@ class MainWindow(QMainWindow):
                 .execute()
             )
 
-            self.history_list.clear()
-            for record in response.data:
+            if self.history_list.count() > 0:
+                self.history_list.clear()
+
+            for record in response.data[:50]:
                 item_text = f"{record['content']}"
                 self.history_list.append_item(item_text)
+                if self.history_list.count() > 50:
+                    self.history_list.takeItem(self.history_list.count() - 1)
 
         except Exception as e:
             if "[Errno -2]" in str(e):
@@ -463,6 +483,9 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(
                 self, "Fetch Error", f"Could not load history: {str(e)}"
             )
+        finally:
+            if "response" in locals():
+                del response
 
     def start_monitoring(self):
         if self.monitor_thread is None:

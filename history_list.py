@@ -12,6 +12,7 @@ class NumberedRowWidget(QWidget):
     def __init__(self, number: int, text: str, parent=None):
         super().__init__(parent)
         layout = QHBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
@@ -20,15 +21,15 @@ class NumberedRowWidget(QWidget):
         self.num_label = QLabel(str(number))
         self.num_label.setFixedWidth(40)
         self.num_label.setAlignment(
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
         )
 
         self.text_label = QLabel(text)
+        self.text_label.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
+        )
         self.text_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
-        )
-        self.text_label.setAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
 
         layout.addWidget(self.num_label)
