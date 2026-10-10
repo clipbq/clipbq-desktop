@@ -1,7 +1,5 @@
 import sys
-import gc
 import os
-import ctypes
 import json
 import webbrowser
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -85,7 +83,7 @@ class ClipboardMonitorThread(QThread):
             self.last_clip = pyperclip.paste()
         except Exception:
             self.last_clip = ""
-        loop_counter = 0
+        
         while self.running:
             self.msleep(1000)
             try:
@@ -100,13 +98,12 @@ class ClipboardMonitorThread(QThread):
                 ):
                     self.last_clip = current_clip
                     self.new_clip_signal.emit(current_clip)
-                # ---G Collect every 60s-----#
-                loop_counter += 1
-                if loop_counter >= 60:
-                    gc.collect()
-                    loop_counter = 0
             except Exception:
-                pass
+                QMessageBox.critical(
+                    self,
+                    "Clipboard Error",
+                    "Please check your system or restart this application and try again.",
+                )
 
     def stop(self):
         self.running = False
@@ -192,7 +189,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(status_controls_layout)
 
         # History List View
-        layout.addWidget(QLabel("Clipboard Sync History:"))
+        layout.addWidget(QLabel("📋 Clipboard Sync History:"))
         self.history_list = NumberedListWidget()
 
         self.history_list.setVerticalScrollMode(
@@ -451,7 +448,7 @@ class MainWindow(QMainWindow):
                 )
                 return
             QMessageBox.critical(
-                self, "Auth Error", f"Failed to authenticate: {str(e)}"
+                self, "Auth Error", f"Failed to authenticate. Please verify auth token: {str(e)}"
             )
 
     def fetch_history(self):
@@ -466,11 +463,9 @@ class MainWindow(QMainWindow):
             if self.history_list.count() > 0:
                 self.history_list.clear()
 
-            for record in response.data[:50]:
+            for record in response.data:
                 item_text = f"{record['content']}"
                 self.history_list.append_item(item_text)
-                if self.history_list.count() > 50:
-                    self.history_list.takeItem(self.history_list.count() - 1)
 
         except Exception as e:
             if "[Errno -2]" in str(e):
@@ -521,7 +516,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     if sys.platform == "win32":
-        appId = "clipbq.clipBQ.cloud.1.0.1"
+        appId = "clipbq.clipBQ.cloud.1.1.1"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(appId)
     app = QApplication(sys.argv)
     app_icon = QIcon()

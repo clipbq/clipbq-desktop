@@ -4,9 +4,9 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QLabel,
+    QSizePolicy
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QPoint
-
+from PyQt6.QtCore import Qt
 
 class NumberedRowWidget(QWidget):
     def __init__(self, number: int, text: str, parent=None):
@@ -19,7 +19,8 @@ class NumberedRowWidget(QWidget):
         self.raw_text = text
 
         self.num_label = QLabel(str(number))
-        self.num_label.setFixedWidth(40)
+        self.num_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
+        
         self.num_label.setAlignment(
             Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
         )
@@ -43,7 +44,7 @@ class NumberedRowWidget(QWidget):
                 border-right: 1px solid #e0e0e0; padding-right: 12px;
             }
             QLabel:last-child { padding-left: 15px; color: #222222; }
-        """)
+            """)
 
     def update_number(self, new_number: int):
         self.num_label.setText(str(new_number))
@@ -61,7 +62,7 @@ class NumberedListWidget(QListWidget):
             QListWidget::item { background: transparent; }
             QListWidget::item:hover { background-color: #f2f7ff; }
             QListWidget::item:selected { background-color: #e2eeff; }
-        """)
+            """)
 
     def _on_item_clicked(self, item: QListWidgetItem):
         row_ui = self.itemWidget(item)
