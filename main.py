@@ -1,3 +1,4 @@
+from PyQt6.QtCore import QTimer
 import sys
 import os
 import json
@@ -72,6 +73,7 @@ def start_local_auth_server(port=9999):
 
 class ClipboardMonitorThread(QThread):
     new_clip_signal = pyqtSignal(str)
+    error_signal = pyqtSignal(str, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -86,6 +88,9 @@ class ClipboardMonitorThread(QThread):
         
         while self.running:
             self.msleep(1000)
+            if not self.running:
+                break
+
             try:
                 current_clip = pyperclip.paste()
                 # ---- Limit to 50000
@@ -98,15 +103,15 @@ class ClipboardMonitorThread(QThread):
                 ):
                     self.last_clip = current_clip
                     self.new_clip_signal.emit(current_clip)
-            except Exception:
-                QMessageBox.critical(
-                    self,
-                    "Clipboard Error",
-                    "Please check your system or restart this application and try again.",
-                )
+            except Exception as e:
+                error_msg = f"System clipboard error occurred: {str(e)}"
+                self.error_signal.emit("Clipboard Error", error_msg)
+
+                self.msleep(500)
 
     def stop(self):
         self.running = False
+        self.wait()
 
 
 class MainWindow(QMainWindow):
@@ -116,6 +121,7 @@ class MainWindow(QMainWindow):
         self.resize(480, 550)
         self.supabase: Client = None
         self.monitor_thread = None
+        self.is_shutting_down = False
 
         self.init_ui()
         self.check_or_route_auth()
@@ -483,9 +489,13 @@ class MainWindow(QMainWindow):
                 del response
 
     def start_monitoring(self):
+        if self.is_shutting_down:
+            return
         if self.monitor_thread is None:
-            self.monitor_thread = ClipboardMonitorThread()
+            self.monitor_thread = ClipboardMonitorThread(parent=self)
             self.monitor_thread.new_clip_signal.connect(self.upload_clip)
+            self.monitor_thread.error_signal.connect(self.show_clipboard_error)
+            self.monitor_thread.finished.connect(self.handle_thread_finished)
             self.monitor_thread.start()
 
     def upload_clip(self, content: str):
@@ -504,7 +514,16 @@ class MainWindow(QMainWindow):
                 return
             print(f"Error pushing clipboard entry: {e}")
 
+    def show_clipboard_error(self, title, message):
+        QMessageBox.critical(self, title, message)
+
+    def handle_thread_finished(self):
+        if not self.is_shutting_down:
+            print("Clipboard Thread stopped unexpectedly! Restarting in 2 seconds...")
+            QTimer.singleShot(2000, self.start_monitoring)
+
     def closeEvent(self, event):
+        self.is_shutting_down = True
         if self.monitor_thread and self.monitor_thread.isRunning():
             self.monitor_thread.stop()
             self.monitor_thread.quit()
