@@ -38,7 +38,7 @@ jobs:
         pyinstaller --onefile --noconsole --name="clipBQ" --collect-all PyQt6 --windowed --clean \
           --add-data ".env:." \
           --add-data "icon.icns:." \
-          --icon=icon.icns main.py
+          --icon=icon.icns clipBQ.py
 
     - name: Upload Finished Mac App
       uses: actions/upload-artifact@v4

@@ -38,7 +38,7 @@ jobs:
         pyinstaller --onefile --noconsole --name="clipBQ" --collect-all PyQt6 --windowed --clean \
         --add-data ".env:." \
         --add-data "icon.png:." \
-        main.py
+        clipBQ.py
 
     - name: Prepare AppDir Structure
       run: |

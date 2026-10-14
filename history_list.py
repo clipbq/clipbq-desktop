@@ -4,9 +4,10 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QLabel,
-    QSizePolicy
+    QSizePolicy,
 )
 from PyQt6.QtCore import Qt
+
 
 class NumberedRowWidget(QWidget):
     def __init__(self, number: int, text: str, parent=None):
@@ -19,8 +20,10 @@ class NumberedRowWidget(QWidget):
         self.raw_text = text
 
         self.num_label = QLabel(str(number))
-        self.num_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
-        
+        self.num_label.setSizePolicy(
+            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred
+        )
+
         self.num_label.setAlignment(
             Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
         )
@@ -36,7 +39,8 @@ class NumberedRowWidget(QWidget):
         layout.addWidget(self.num_label)
         layout.addWidget(self.text_label)
 
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QWidget { background-color: transparent; }
             QLabel { padding: 10px; border-bottom: 1px solid #e0e0e0; }
             QLabel:first-child {
@@ -44,7 +48,8 @@ class NumberedRowWidget(QWidget):
                 border-right: 1px solid #e0e0e0; padding-right: 12px;
             }
             QLabel:last-child { padding-left: 15px; color: #222222; }
-            """)
+            """
+        )
 
     def update_number(self, new_number: int):
         self.num_label.setText(str(new_number))
@@ -57,12 +62,14 @@ class NumberedListWidget(QListWidget):
         self.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        self.setStyleSheet("""
+        self.setStyleSheet(
+            """
             QListWidget { border: 1px solid #dcdcdc; outline: none; }
             QListWidget::item { background: transparent; }
             QListWidget::item:hover { background-color: #f2f7ff; }
             QListWidget::item:selected { background-color: #e2eeff; }
-            """)
+            """
+        )
 
     def _on_item_clicked(self, item: QListWidgetItem):
         row_ui = self.itemWidget(item)
