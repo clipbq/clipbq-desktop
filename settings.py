@@ -23,7 +23,8 @@ class SettingsDialog(QDialog):
         self.btn_delete_account = QPushButton("Delete Account Permanently")
         self.btn_delete_account.setFixedHeight(35)
 
-        self.btn_delete_account.setStyleSheet("""
+        self.btn_delete_account.setStyleSheet(
+            """
             QPushButton {
                 background-color: #D32F2F;
                 color: white;
@@ -34,7 +35,8 @@ class SettingsDialog(QDialog):
             QPushButton:hover {
                 background-color: #B71C1C;
             }
-        """)
+        """
+        )
         self.btn_delete_account.clicked.connect(self.handle_account_deletion)
         layout.addWidget(self.btn_delete_account)
 

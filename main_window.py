@@ -1,12 +1,10 @@
-from PyQt6.QtCore import QTimer
 import sys
 import os
 import json
 import webbrowser
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer
 from threading import Thread
-import pyperclip
-from PyQt6.QtCore import QThread, pyqtSignal, QByteArray
+from PyQt6.QtCore import QByteArray
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -24,6 +22,8 @@ from dotenv import load_dotenv
 
 from history_list import NumberedListWidget
 from settings import SettingsDialog
+from token_callback_handler import TokenCallbackHandler
+from clipboard_monitor import ClipboardMonitor
 
 
 def resource_path(relative_path):
@@ -40,78 +40,8 @@ load_dotenv(env_path)
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
-LOGIN_PAGE_URL = os.environ.get("LOGIN_PAGE_URL")  # Vite dev server
+LOGIN_PAGE_URL = os.environ.get("LOGIN_PAGE_URL")
 TOKEN_FILE = os.path.expanduser("~/.clipbq_auth_token.json")
-
-auth_callback_token = None
-
-
-class TokenCallbackHandler(BaseHTTPRequestHandler):
-
-    def do_GET(self):
-        global auth_callback_token
-        if "/callback" in self.path:
-            from urllib.parse import urlparse, parse_qs
-
-            query = parse_qs(urlparse(self.path).query)
-            if "token" in query:
-                auth_callback_token = query["token"][0]
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write(
-                b"<h1>Authentication Successful!</h1><p>You may close this tab and return to the application.</p>"
-            )
-
-
-def start_local_auth_server(port=9999):
-    server = HTTPServer(("localhost", port), TokenCallbackHandler)
-    server.single_request = True
-    server.handle_request()
-    server.server_close()
-
-
-class ClipboardMonitorThread(QThread):
-    new_clip_signal = pyqtSignal(str)
-    error_signal = pyqtSignal(str, str)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.running = True
-        self.last_clip = ""
-
-    def run(self):
-        try:
-            self.last_clip = pyperclip.paste()
-        except Exception:
-            self.last_clip = ""
-        
-        while self.running:
-            self.msleep(1000)
-            if not self.running:
-                break
-
-            try:
-                current_clip = pyperclip.paste()
-                # ---- Limit to 50000
-                if current_clip and len(current_clip) > 50000:
-                    current_clip = current_clip[:50000] + "... (truncated)"
-                if (
-                    current_clip
-                    and isinstance(current_clip, str)
-                    and current_clip != self.last_clip
-                ):
-                    self.last_clip = current_clip
-                    self.new_clip_signal.emit(current_clip)
-            except Exception as e:
-                error_msg = f"System clipboard error occurred: {str(e)}"
-                self.error_signal.emit("Clipboard Error", error_msg)
-
-                self.msleep(500)
-
-    def stop(self):
-        self.running = False
-        self.wait()
 
 
 class MainWindow(QMainWindow):
@@ -120,8 +50,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("clipBQ Cloud")
         self.resize(480, 550)
         self.supabase: Client = None
-        self.monitor_thread = None
-        self.is_shutting_down = False
+        self.monitor = None
+        self.port = 9999
 
         self.init_ui()
         self.check_or_route_auth()
@@ -229,7 +159,6 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self.btn_open_portal)
         layout.addLayout(button_layout)
 
-    # ---- UI Actions ---
     def handle_sync_action(self):
         previous_text = self.status_label.text()
         previous_style = self.status_label.styleSheet()
@@ -381,12 +310,16 @@ class MainWindow(QMainWindow):
         callback_url = f"{LOGIN_PAGE_URL}?redirect_port=9999"
         webbrowser.open(callback_url)
 
+    def start_local_auth_server(self):
+        server = HTTPServer(("localhost", self.port), TokenCallbackHandler)
+        server.single_request = True
+        server.handle_request()
+        server.server_close()
+
     def await_browser_callback(self):
         global auth_callback_token
         auth_callback_token = None
-
-        start_local_auth_server(port=9999)
-
+        self.start_local_auth_server()
         if auth_callback_token:
             self.save_token(auth_callback_token)
             self.init_supabase_with_token(auth_callback_token)
@@ -402,7 +335,8 @@ class MainWindow(QMainWindow):
 
     def paste_from_clipboard(self):
         try:
-            clip_text = pyperclip.paste().strip()
+            clipboard = QApplication.clipboard()
+            clip_text = clipboard.text()
             if clip_text:
                 self.token_input.setText(clip_text)
             else:
@@ -454,7 +388,9 @@ class MainWindow(QMainWindow):
                 )
                 return
             QMessageBox.critical(
-                self, "Auth Error", f"Failed to authenticate. Please verify auth token: {str(e)}"
+                self,
+                "Auth Error",
+                f"Failed to authenticate. Please verify auth token: {str(e)}",
             )
 
     def fetch_history(self):
@@ -489,14 +425,9 @@ class MainWindow(QMainWindow):
                 del response
 
     def start_monitoring(self):
-        if self.is_shutting_down:
-            return
-        if self.monitor_thread is None:
-            self.monitor_thread = ClipboardMonitorThread(parent=self)
-            self.monitor_thread.new_clip_signal.connect(self.upload_clip)
-            self.monitor_thread.error_signal.connect(self.show_clipboard_error)
-            self.monitor_thread.finished.connect(self.handle_thread_finished)
-            self.monitor_thread.start()
+        self.monitor = ClipboardMonitor(parent=self)
+        self.monitor.new_clip_signal.connect(self.upload_clip)
+        self.monitor.error_signal.connect(self.show_clipboard_error)
 
     def upload_clip(self, content: str):
         try:
@@ -517,32 +448,6 @@ class MainWindow(QMainWindow):
     def show_clipboard_error(self, title, message):
         QMessageBox.critical(self, title, message)
 
-    def handle_thread_finished(self):
-        if not self.is_shutting_down:
-            print("Clipboard Thread stopped unexpectedly! Restarting in 2 seconds...")
-            QTimer.singleShot(2000, self.start_monitoring)
-
     def closeEvent(self, event):
-        self.is_shutting_down = True
-        if self.monitor_thread and self.monitor_thread.isRunning():
-            self.monitor_thread.stop()
-            self.monitor_thread.quit()
-            if not self.monitor_thread.wait(2000):
-                self.monitor_thread.terminate()
-                self.monitor_thread.wait()
+        self.monitor.stop()
         event.accept()
-
-
-if __name__ == "__main__":
-    if sys.platform == "win32":
-        appId = "clipbq.clipBQ.cloud.1.1.1"
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(appId)
-    app = QApplication(sys.argv)
-    app_icon = QIcon()
-    app_icon.addFile(resource_path("icon.png"))
-    app_icon.addFile(resource_path("icon.ico"))
-    app.setWindowIcon(app_icon)
-    window = MainWindow()
-    window.setWindowIcon(app_icon)
-    window.show()
-    sys.exit(app.exec())
