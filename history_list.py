@@ -12,7 +12,7 @@ from PyQt6.QtGui import QMouseEvent
 
 
 def parse_clipboard_text(text: str) -> str:
-    url_pattern = r'(https?://[^\s<>"]+|www\.[^\s<>"]+|[a-zA-Z0-9.-]+\.(?:com|org|net|ly|io|edu|gov)/[^\s<>"]*)'
+    url_pattern = r'(?:https?://[^\s<>"]+|www\.[^\s<>"]+|(?<![\w.=])(?<!\.)[a-zA-Z0-9.-]+\.[a-z]{2,6}(?![A-Z\w(])(?:/[^\s<>"]*)?)'
 
     def replace_with_link(match):
         url = match.group(0)
