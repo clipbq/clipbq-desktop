@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
 )
 from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtSvgWidgets import QSvgWidget
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -125,7 +126,24 @@ class MainWindow(QMainWindow):
         layout.addLayout(status_controls_layout)
 
         # History List View
-        layout.addWidget(QLabel("📋 Clipboard Sync History:"))
+        header_layout = QHBoxLayout()
+        clipboard_svg = b"""
+        <svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="none" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" fill="#2196F3"/>
+        </svg>
+        """
+
+        clipboard_svg_widget = QSvgWidget()
+        clipboard_svg_widget.load(clipboard_svg)
+        clipboard_svg_widget.setFixedSize(18, 18)
+
+        title_text_label = QLabel("Clipboard Sync History:")
+
+        header_layout.addWidget(clipboard_svg_widget)
+        header_layout.addWidget(title_text_label)
+
+        layout.addLayout(header_layout)
         self.history_list = NumberedListWidget()
 
         self.history_list.setVerticalScrollMode(
