@@ -1,4 +1,5 @@
 import re
+import html
 from PyQt6.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -12,20 +13,58 @@ from PyQt6.QtGui import QMouseEvent
 
 
 def parse_clipboard_text(text: str) -> str:
-    url_pattern = r'(?:https?://[^\s<>"]+|www\.[^\s<>"]+|(?<![\w.=])(?<!\.)[a-zA-Z0-9.-]+\.[a-z]{2,6}(?![A-Z\w(])(?:/[^\s<>"]*)?)'
+    strict_url_pattern = r'(?:https?://|www\.)[^\s<>"]+'
+    code_indicators = re.compile(
+        r"(?:^\s*(?:def|import|from|class|if|for|while|return|function|const|let|var|public|private|void)\b)|"
+        r"(?:[{};]$)|"
+        r"(?:\s*=\s*.*[+\-*/%])|"
+        r"(?:\[\s*\d+\s*\])|"
+        r"(?:^\s{2,})"
+    )
 
-    def replace_with_link(match):
-        url = match.group(0)
-        if url.startswith("http://") or url.startswith("https://"):
-            href = url
-        elif url.startswith("www."):
-            href = f"http://{url}"
+    def process_text_links(line_text: str) -> str:
+        placeholders = {}
+        counter = 0
+
+        def format_strict_urls(match):
+            nonlocal counter
+            url = match.group(0)
+            if url.startswith("www."):
+                href = f"http://{url}"
+            else:
+                href = url
+            styled_link = f'<a href="{href}" style="color: #0000EE; text-decoration: underline;">{url}</a>'
+            key = f"___STRICT_LINK_{counter}___"
+            placeholders[key] = styled_link
+            counter += 1
+            return key
+
+        protected_line = re.sub(strict_url_pattern, format_strict_urls, line_text)
+        escaped_text = html.escape(protected_line)
+        for key, styled_link in placeholders.items():
+            escaped_text = escaped_text.replace(key, styled_link)
+            escaped_text = escaped_text.replace(html.escape(key), styled_link)
+        return escaped_text
+
+    lines = text.splitlines()
+    html_elements = []
+
+    for line in lines:
+        if not line.strip():
+            html_elements.append('<div style="margin: 0; padding: 0;"><br></div>')
+            continue
+        has_strict_url = re.search(strict_url_pattern, line)
+        if code_indicators.search(line) and not has_strict_url:
+            escaped_code = html.escape(line)
+            html_elements.append(
+                f'<div style="margin: 0; padding: 0; white-space: pre-wrap;">{escaped_code}</div>'
+            )
         else:
-            href = f"https://{url}"
-        return f'<a href="{href}">{url}</a>'
-
-    linked_text = re.sub(url_pattern, replace_with_link, text)
-    return linked_text.replace("\n", "<br>")
+            formatted_text = process_text_links(line)
+            html_elements.append(
+                f'<div style="margin: 0; padding: 0; white-space: pre-wrap;">{formatted_text}</div>'
+            )
+    return "".join(html_elements)
 
 
 class LinkAwareLabel(QLabel):
