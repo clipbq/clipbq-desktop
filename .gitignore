@@ -1,0 +1,8 @@
+*.spec
+.env
+.venv/
+build/
+*.html
+dist/
+__pycache__/
+.vscode
