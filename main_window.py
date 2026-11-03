@@ -25,6 +25,7 @@ from history_list import NumberedListWidget
 from settings import SettingsDialog
 from token_callback_handler import TokenCallbackHandler
 from clipboard_monitor import ClipboardMonitor
+import _globals
 
 
 def resource_path(relative_path):
@@ -65,8 +66,23 @@ class MainWindow(QMainWindow):
         status_controls_layout = QHBoxLayout()
 
         # Status Display
+        auth_status_svg = b"""
+                <svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="none" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- Shackle / Loop -->
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    <!-- Lock Body -->
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <!-- Keyhole -->
+                    <circle cx="12" cy="16" r="1" />
+                    <path d="M12 17v3" />
+                </svg>
+                """
+        auth_status_svg_widget = QSvgWidget()
+        auth_status_svg_widget.load(auth_status_svg)
+        auth_status_svg_widget.setFixedSize(18, 18)
         self.status_label = QLabel("Status: Not Authenticated")
         self.status_label.setStyleSheet("color: red; font-weight: bold;")
+        status_controls_layout.addWidget(auth_status_svg_widget)
         status_controls_layout.addWidget(self.status_label)
 
         status_controls_layout.addStretch()
@@ -335,8 +351,7 @@ class MainWindow(QMainWindow):
         server.server_close()
 
     def await_browser_callback(self):
-        global auth_callback_token
-        auth_callback_token = None
+        auth_callback_token = _globals.auth_token
         self.start_local_auth_server()
         if auth_callback_token:
             self.save_token(auth_callback_token)
@@ -426,6 +441,7 @@ class MainWindow(QMainWindow):
             for record in response.data:
                 item_text = f"{record['content']}"
                 self.history_list.append_item(item_text)
+                _globals.all_history.append(item_text)
 
         except Exception as e:
             if "[Errno -2]" in str(e):
@@ -448,11 +464,14 @@ class MainWindow(QMainWindow):
         self.monitor.error_signal.connect(self.show_clipboard_error)
 
     def upload_clip(self, content: str):
+        if content in _globals.all_history:
+            return
         try:
             data = {"user_id": self.user_id, "content": content}
             response = self.supabase.table("clipboard_history").insert(data).execute()
             if response.data:
                 self.history_list.prepend_item(f"{content}")
+                _globals.all_history.insert(0, content)
         except Exception as e:
             if "[Errno -2]" in str(e):
                 QMessageBox.critical(
